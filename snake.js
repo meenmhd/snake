@@ -1,256 +1,180 @@
+const CONFIG = {
+  cell: 40,        // pixels per grid square
+  cols: 20,
+  rows: 15,
+  foodCount: 9,    // food is numbered 1..foodCount
+  targetMin: 20,
+  targetMax: 34,
+};
+
+const COLORS = {
+  board: '#000000',
+  head: '#0DFF00',
+  body: '#CC0040',
+  food: '#FFD400',
+  foodText: '#2f2028',
+};
+
+const DIRECTIONS = {
+  ArrowUp: { x: 0, y: -1 },
+  ArrowDown: { x: 0, y: 1 },
+  ArrowLeft: { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 },
+};
+
 const canvas = document.getElementById('snake');
 const context = canvas.getContext('2d');
+canvas.width = CONFIG.cols * CONFIG.cell;
+canvas.height = CONFIG.rows * CONFIG.cell;
 
-/* Define colors */
+const targetEl = document.getElementById('target');
+const scoreEl = document.getElementById('score');
+const needEl = document.getElementById('need');
+const messageEl = document.getElementById('message');
+const messageTextEl = document.getElementById('message-text');
+const playAgainEl = document.getElementById('play-again');
 
-const colors = [
-    null,
-    '#444444',    /* background */
-    '#FF0090',    /* snake */
-    '#0DFF00',    /* food */
-    '#CC0040',    /* food */
-];
+let snake;     // list of {x, y}, head first
+let food;      // list of {x, y, value}
+let score;
+let target;
+let gameOver;
 
-context.scale(20, 20);
-
-const food = [];
-function create_food(food){
-  if (food.length>0){
-    food = [];
-  }
-  for (i=0;i<9;i++) {
-    let locationOK = 1;
-    do {
-      locationOK = 1;
-      locx = canvas.width/20 * Math.random() | 0;
-      locy = canvas.height/20 * Math.random() | 0;
-      console.log('Gen ',i,' = ',locx,locy);
-
-      for (k=0;k<food.length;k++){
-        console.log('k = ',k,'(',food[k].pos.x,food[k].pos.y,')')
-        if(locx==food[k].pos.x && locy==food[k].pos.y){
-          console.log('Repeat -----',locx,locy);
-          locationOK = 0;
-          break
-        }
-      }
-      if (locx==10 && locy==7){
-        locationOK = 0;
-      }
-    } while (locationOK==0);
-
-    food.push({
-        pos: {x:locx, y:locy},
-        value: Math.floor(i+1)
-    });
-  }
-};
-
-create_food(food);
-
-player = {
-    pos: {x: 10, y: 7},
-    direction: 'Left',
-    tail: [{dir:'Right', num:2}, {dir:'Up', num:3},{dir:'Left', num:2}],
-    tails : [],
-    score: 0,
-};
-
-target = Math.floor(Math.random() * (35-20) + 20);
-console.log("Target= ", target);
-document.getElementById('target').innerText = target;
-
-
-//////// new function
-function update(){
-  let alltail = player.tail;
-  for(i=0;i<food.length;i++){
-    if (player.pos.x == food[i].pos.x && player.pos.y==food[i].pos.y){
-      player.score += food[i].value;
-      player.tail[player.tail.length-1].num += 1;
-      food.splice(i,1)
-      break
-    }
-  }
-
-  context.fillStyle = '#000000';
-  context.fillRect(0, 0, canvas.width/20, canvas.height/20);
-  context.fillStyle = colors[3];
-  context.fillRect(player.pos.x,  player.pos.y, 1, 1);
-
-  let dir = 'Still';
-  let currentx = player.pos.x;
-  let currenty = player.pos.y;
-
-  for (let x = 0; x < alltail.length; ++x) {
-    dir = alltail.slice(x)[0].dir;
-    for (let y = 0; y < alltail.slice(x)[0].num; ++y) {
-      if (dir == 'Left') {
-        currentx -= 1;
-        if (currentx < 0) {
-            currentx = canvas.width/20-1;
-        }
-        player.tails.push({x:currentx,y:currenty})
-        context.fillStyle = colors[4];
-        context.fillRect(currentx, currenty,1, 1);
-      }
-      if (dir == 'Right') {
-        currentx += 1;
-        if (currentx>=canvas.width/20) {
-            currentx = 0;
-        }
-        player.tails.push({x:currentx,y:currenty})
-        context.fillStyle = colors[4];
-        context.fillRect(currentx, currenty,1, 1);
-      }
-      if (dir == 'Down') {
-        currenty += 1;
-        if (currenty>=canvas.height/20) {
-            currenty = 0;
-        }
-        player.tails.push({x:currentx,y:currenty})
-        context.fillStyle = colors[4];
-        context.fillRect(currentx, currenty,1, 1);
-      }
-      if (dir == 'Up') {
-        currenty -= 1;
-        if (currenty < 0) {
-            currenty = canvas.height/20 -1;
-        }
-        player.tails.push({x:currentx,y:currenty})
-        context.fillStyle = colors[4];
-        context.fillRect(currentx, currenty,1, 1);
-      }
-    }
-
-    for (let x= 0 ;x<player.tails.length;++x){
-      if (player.pos.x == player.tails[x].x && player.pos.y == player.tails[x].y){
-        alert('GAME OVER');
-        window.location.href = window.location.href;
-      }
-    }
-  }
-
-  for(i=0;i<food.length;i++){
-    context.font = "1px Verdana";
-    context.fillText(food[i].value.toString(), food[i].pos.x,food[i].pos.y+1);
-  }
-  if (player.score==target){
-    alert('CONGRATULATIONS');
-    window.location.href = window.location.href;
-  } else if(player.score>target){
-    alert('TRY AGAIN');
-    window.location.href = window.location.href;
-  }
-  document.getElementById('score').innerText = player.score;
+function sameCell(a, b) {
+  return a.x === b.x && a.y === b.y;
 }
 
-update();
+function randomInt(min, max) {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
 
-/////////////////////////////////// Left
+function placeFood() {
+  const free = [];
+  for (let y = 0; y < CONFIG.rows; y++) {
+    for (let x = 0; x < CONFIG.cols; x++) {
+      if (!snake.some(cell => sameCell(cell, { x, y }))) {
+        free.push({ x, y });
+      }
+    }
+  }
+  food = [];
+  for (let value = 1; value <= CONFIG.foodCount; value++) {
+    const [cell] = free.splice(randomInt(0, free.length - 1), 1);
+    food.push({ ...cell, value });
+  }
+}
+
+function reset() {
+  const startX = Math.floor(CONFIG.cols / 2);
+  const startY = Math.floor(CONFIG.rows / 2);
+  snake = [0, 1, 2, 3].map(i => ({ x: startX + i, y: startY }));
+  placeFood();
+  score = 0;
+  target = randomInt(CONFIG.targetMin, CONFIG.targetMax);
+  gameOver = false;
+  messageEl.hidden = true;
+  render();
+}
+
+function endGame(text) {
+  gameOver = true;
+  messageTextEl.textContent = text;
+  messageEl.hidden = false;
+  playAgainEl.focus();
+}
+
+function move(dir) {
+  if (gameOver) return;
+
+  const head = snake[0];
+  const next = {
+    x: (head.x + dir.x + CONFIG.cols) % CONFIG.cols,
+    y: (head.y + dir.y + CONFIG.rows) % CONFIG.rows,
+  };
+
+  // Ignore a move straight back into the neck.
+  if (sameCell(next, snake[1])) return;
+
+  const eaten = food.findIndex(f => sameCell(f, next));
+  const grows = eaten !== -1;
+
+  // The tail end moves out of the way unless the snake is growing.
+  const body = grows ? snake : snake.slice(0, -1);
+  if (body.some(cell => sameCell(cell, next))) {
+    endGame('Oops! You bumped into yourself.');
+    return;
+  }
+
+  snake.unshift(next);
+  if (grows) {
+    score += food[eaten].value;
+    food.splice(eaten, 1);
+  } else {
+    snake.pop();
+  }
+  render();
+
+  if (score === target) {
+    endGame(`Well done! You made ${target}!`);
+  } else if (score > target) {
+    endGame(`Too many! ${score} is more than ${target}.`);
+  }
+}
+
+function drawCell(cell, color) {
+  const size = CONFIG.cell;
+  context.fillStyle = color;
+  context.fillRect(cell.x * size + 1, cell.y * size + 1, size - 2, size - 2);
+}
+
+function render() {
+  context.fillStyle = COLORS.board;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  context.font = `bold ${CONFIG.cell * 0.7}px Verdana, sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  for (const f of food) {
+    drawCell(f, COLORS.food);
+    context.fillStyle = COLORS.foodText;
+    context.fillText(f.value, (f.x + 0.5) * CONFIG.cell, (f.y + 0.55) * CONFIG.cell);
+  }
+
+  snake.slice(1).forEach(cell => drawCell(cell, COLORS.body));
+  drawCell(snake[0], COLORS.head);
+
+  targetEl.textContent = target;
+  scoreEl.textContent = score;
+  needEl.textContent = Math.max(target - score, 0);
+}
+
 document.addEventListener('keydown', event => {
-  let alltail = player.tail;
-  if (event.keyCode === 37) {
-    if (player.direction == 'Right') {
-      return;
-    }
-    player.direction = 'Left';
-    player.tails = []
-    player.pos.x -= 1;
-    if (player.pos.x<0 ){
-      player.pos.x = canvas.width/20-1;
-    }
+  const dir = DIRECTIONS[event.key];
+  if (!dir) return;
+  event.preventDefault();
+  move(dir);
+});
 
-    if (alltail.length > 0) {
-      if (alltail[0].dir == 'Right') {
-        alltail[0].num += 1;
-      } else {
-        alltail.unshift({dir:'Right', num:1});
-      }
-
-      alltail[alltail.length-1].num -= 1;
-      if(alltail[alltail.length-1].num == 0){
-        alltail.pop();
-      }
-    }
-    update()
-
-/////////////////////////////////// UP
-  } else if (event.keyCode === 38) {
-    if (player.direction == 'Down') {
-      return;
-    }
-    player.direction = 'Up';
-    player.tails = []
-    player.pos.y -= 1
-    if (player.pos.y < 0 ){
-      player.pos.y = canvas.height/20-1;
-    }
-
-    if (alltail.length > 0) {
-      if (alltail[0].dir == 'Down') {
-        alltail[0].num += 1;
-      } else {
-        alltail.unshift({dir:'Down', num:1});
-      }
-
-      alltail[alltail.length-1].num -= 1;
-      if(alltail[alltail.length-1].num == 0){
-        alltail.pop();
-      }
-    }
-    update()
-
-/////////////////////////////////// Right
-  } else if (event.keyCode === 39) {
-    if (player.direction == 'Left') {
-      return;
-    }
-    player.direction = 'Right';
-    player.tails = []
-    player.pos.x += 1
-    if (player.pos.x >canvas.width/20 -1 ){
-      player.pos.x = 0;
-    }
-
-    if (alltail.length > 0) {
-      if (alltail[0].dir == 'Left') {
-        alltail[0].num += 1;
-      } else {
-        alltail.unshift({dir:'Left', num:1});
-      }
-
-      alltail[alltail.length-1].num -= 1;
-      if(alltail[alltail.length-1].num == 0){
-        alltail.pop();
-      }
-    }
-    update()
-
-/////////////////////////////////// Down
-  } else if (event.keyCode === 40) {
-    if (player.direction == 'Up') {
-      return;
-    }
-    player.direction = 'Down';
-    player.tails = []
-    player.pos.y += 1
-    if (player.pos.y >canvas.height/20-1 ){
-      player.pos.y = 0;
-    }
-
-    if (alltail.length > 0) {
-      if (alltail[0].dir == 'Up') {
-        alltail[0].num += 1;
-      } else {
-        alltail.unshift({dir:'Up', num:1});
-      }
-
-      alltail[alltail.length-1].num -= 1;
-      if(alltail[alltail.length-1].num == 0){
-        alltail.pop();
-      }
-    }
-    update()
+// Swipe controls for tablets.
+let touchStart = null;
+canvas.addEventListener('touchstart', event => {
+  const t = event.touches[0];
+  touchStart = { x: t.clientX, y: t.clientY };
+});
+canvas.addEventListener('touchend', event => {
+  if (!touchStart) return;
+  const t = event.changedTouches[0];
+  const dx = t.clientX - touchStart.x;
+  const dy = t.clientY - touchStart.y;
+  touchStart = null;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 20) return;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    move(dx > 0 ? DIRECTIONS.ArrowRight : DIRECTIONS.ArrowLeft);
+  } else {
+    move(dy > 0 ? DIRECTIONS.ArrowDown : DIRECTIONS.ArrowUp);
   }
 });
+
+playAgainEl.addEventListener('click', reset);
+
+reset();
