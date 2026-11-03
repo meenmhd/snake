@@ -1,29 +1,87 @@
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>Snake</title>
-    <style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Snake</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
     body {
       background: #2f2028;
       color: #fff;
       font-family: sans-serif;
       font-size: 2em;
       text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .3em;
+      padding: .3em;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    header {
+      display: flex;
+      gap: 1.5em;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    header strong {
+      color: #FFD400;
+    }
+    .board {
+      position: relative;
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      justify-content: center;
     }
     canvas {
       border: solid .2em #fff;
-      height: 90vh;
+      max-width: 100%;
+      max-height: 100%;
+      touch-action: none;
     }
-    </style>
-
+    #message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .6em;
+      background: rgba(47, 32, 40, .85);
+    }
+    #message[hidden] {
+      display: none;
+    }
+    #message button {
+      font: inherit;
+      padding: .3em 1em;
+      border: none;
+      border-radius: .4em;
+      background: #0DFF00;
+      color: #2f2028;
+      cursor: pointer;
+    }
+  </style>
 </head>
-
 <body>
-    <div style="display: inline-block">Target: </div>
-    <div style="display: inline-block" id="target"></div>
-    <div style="display: inline-block">Score: </div>
-    <div style="display: inline-block" id="score"></div>
-    <div> </div>
-    <canvas id="snake" width="400" height="300" />
-    <script src="snake.js"></script>
+  <header>
+    <div>Target: <strong id="target"></strong></div>
+    <div>Score: <strong id="score"></strong></div>
+    <div>Need: <strong id="need"></strong> more</div>
+  </header>
+  <div class="board">
+    <canvas id="snake"></canvas>
+    <div id="message" hidden>
+      <div id="message-text"></div>
+      <button id="play-again">Play again</button>
+    </div>
+  </div>
+  <script src="snake.js"></script>
 </body>
 </html>
